@@ -1,0 +1,141 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "airsense-ingest-api"
+version = "0.1.0"
+description = "Telemetry ingest, scoring and rules engine for connected split AC units"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "redis>=5.2",
+    "aiomqtt>=2.3",
+    "sse-starlette>=2.1",
+    "onnxruntime>=1.20",
+    "numpy>=2.1",
+    "httpx>=0.28",
+    "structlog>=24.4",
+    "prometheus-client>=0.21",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "respx>=0.22",
+    "testcontainers[postgres,redis]>=4.9",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "import-linter>=2.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/airsense"]
+
+# ─── ruff ─────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "A",         # builtins shadowing
+    "C4",        # comprehensions
+    "DTZ",       # timezone-aware datetimes
+    "T20",       # no print()
+    "SIM",       # simplify
+    "PTH",       # pathlib
+    "RUF",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"migrations/**" = ["I001"]
+
+# ─── mypy ─────────────────────────────────────────────────────────────────
+# Strict globally rather than only on domain/application: the codebase is new,
+# so there is no legacy to grandfather in.
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["aiomqtt.*", "onnxruntime.*", "sse_starlette.*", "testcontainers.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["migrations.*"]
+ignore_errors = true
+
+# ─── pytest ───────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+addopts = "-q --strict-markers"
+markers = ["integration: requires the docker compose stack or testcontainers"]
+
+# ─── import-linter ────────────────────────────────────────────────────────
+# The layering rule is enforced in CI rather than trusted to reviewers.
+[tool.importlinter]
+root_package = "airsense"
+# Required because the forbidden contracts below name third-party packages.
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers: api -> infrastructure -> application -> domain"
+type = "layers"
+layers = [
+    "airsense.api",
+    "airsense.infrastructure",
+    "airsense.application",
+    "airsense.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain is free of frameworks and I/O"
+type = "forbidden"
+source_modules = ["airsense.domain"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "sqlalchemy",
+    "alembic",
+    "pydantic",
+    "pydantic_settings",
+    "redis",
+    "aiomqtt",
+    "onnxruntime",
+    "httpx",
+    "structlog",
+    "prometheus_client",
+]
+
+[[tool.importlinter.contracts]]
+name = "Application depends on ports, not on concrete adapters"
+type = "forbidden"
+source_modules = ["airsense.application"]
+forbidden_modules = [
+    "fastapi",
+    "sqlalchemy",
+    "redis",
+    "aiomqtt",
+    "onnxruntime",
+    "httpx",
+]
