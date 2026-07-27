@@ -1,0 +1,125 @@
+name: airsense
+
+services:
+  # ─── Infrastructure ─────────────────────────────────────────────────────
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airsense}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airsense}
+      POSTGRES_DB: ${POSTGRES_DB:-airsense}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      - ./infra/timescale/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airsense} -d ${POSTGRES_DB:-airsense}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t healthcheck -m ping -q 0"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # ─── Application ────────────────────────────────────────────────────────
+  ingest-api:
+    build:
+      context: ./apps/ingest-api
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_PORT: 8000
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000}
+      DATABASE_DSN: postgresql+asyncpg://${POSTGRES_USER:-airsense}:${POSTGRES_PASSWORD:-airsense}@timescaledb:5432/${POSTGRES_DB:-airsense}
+      REDIS_DSN: redis://redis:6379/0
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX:-airsense/telemetry}
+      TICKET_SINK: ${TICKET_SINK:-memory}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./apps/ingest-api/src:/app/src:ro
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  device-simulator:
+    build:
+      context: ./apps/device-simulator
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_PORT: 8001
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX:-airsense/telemetry}
+      PUBLISH_INTERVAL_SECONDS: ${SIMULATOR_PUBLISH_INTERVAL_SECONDS:-1.0}
+    ports:
+      - "${SIMULATOR_API_PORT:-8001}:8001"
+    volumes:
+      - ./apps/device-simulator/src:/app/src:ro
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      args:
+        # Vite inlines env at build time, so the API URL is a build arg rather
+        # than a runtime variable.
+        VITE_API_URL: http://localhost:${API_PORT:-8000}
+        VITE_SIMULATOR_URL: http://localhost:${SIMULATOR_API_PORT:-8001}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:80"
+    depends_on:
+      ingest-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  timescale-data:
+  mosquitto-data:
