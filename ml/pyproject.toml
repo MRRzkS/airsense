@@ -36,9 +36,14 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "A", "C4", "DTZ", "T20", "SIM", "PTH", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# These are command-line entry points; stdout is their interface.
+"build_replay_fixture.py" = ["T201"]
+"train.py" = ["T201"]
+
 [tool.ruff.lint.isort]
 # Flat layout: these are local modules, not third-party packages.
-known-first-party = ["cmapss", "build_replay_fixture"]
+known-first-party = ["cmapss", "features", "evaluate", "export_onnx"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

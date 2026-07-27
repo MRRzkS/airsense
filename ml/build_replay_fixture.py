@@ -11,18 +11,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from cmapss import Calibration, load_raw, to_ac_channels
+from cmapss import (
+    CHANNEL_COLUMNS,
+    REPLAY_STRIDE,
+    Calibration,
+    load_raw,
+    to_ac_channels,
+)
 
 # Fixed so the committed artifact is byte-reproducible from the same input.
 SEED = 20260727
-
-CHANNEL_COLUMNS = [
-    "compressor_current_a",
-    "discharge_pressure_kpa",
-    "suction_temperature_c",
-    "ambient_temperature_c",
-    "vibration_rms_mm_s",
-]
 
 
 def build(raw: Path, *, units: int, stride: int) -> pd.DataFrame:
@@ -60,7 +58,7 @@ def main() -> None:
         default=Path("../apps/device-simulator/data/replay_fd001.parquet"),
     )
     parser.add_argument("--units", type=int, default=4, help="devices in the demo fleet")
-    parser.add_argument("--stride", type=int, default=3, help="keep every Nth cycle")
+    parser.add_argument("--stride", type=int, default=REPLAY_STRIDE, help="keep every Nth cycle")
     args = parser.parse_args()
 
     fixture = build(args.raw, units=args.units, stride=args.stride)
@@ -68,8 +66,8 @@ def main() -> None:
     fixture.to_parquet(args.out, index=False, compression="zstd")
 
     summary = fixture.groupby("device_id")["sequence"].max() + 1
-    print(f"wrote {args.out} — {len(fixture)} rows")  # noqa: T201
-    print(summary.to_string())  # noqa: T201
+    print(f"wrote {args.out} — {len(fixture)} rows")
+    print(summary.to_string())
 
 
 if __name__ == "__main__":

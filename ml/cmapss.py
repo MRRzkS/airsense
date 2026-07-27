@@ -51,6 +51,20 @@ TARGET_RANGE: Final[dict[str, tuple[float, float]]] = {
     "vibration_rms_mm_s": (0.8, 6.5),
 }
 
+CHANNEL_COLUMNS: Final[list[str]] = [
+    "compressor_current_a",
+    "discharge_pressure_kpa",
+    "suction_temperature_c",
+    "ambient_temperature_c",
+    "vibration_rms_mm_s",
+]
+
+# Keep every third cycle. This shortens the replay enough to loop inside a
+# review, but it also has to be applied when building the training set: a
+# twenty-sample rolling window covers sixty cycles online, so training on
+# full-resolution data would give the same feature a different meaning.
+REPLAY_STRIDE: Final = 3
+
 AMBIENT_MEAN_C: Final = 24.0
 AMBIENT_SWING_C: Final = 6.0
 AMBIENT_NOISE_C: Final = 0.4
