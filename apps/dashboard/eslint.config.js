@@ -5,7 +5,9 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "node_modules"] },
+  // src/components/ui holds vendored shadcn files. They are generated, not
+  // authored here, and their variant exports trip react-refresh by design.
+  { ignores: ["dist", "node_modules", "src/components/ui"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
