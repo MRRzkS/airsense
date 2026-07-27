@@ -21,6 +21,7 @@ class ReadingRow(Base):
     # can say anything, and storing 0.0 there would be indistinguishable from
     # a genuinely healthy score.
     health_index: Mapped[float | None] = mapped_column(Float, nullable=True)
+    condition: Mapped[str] = mapped_column(String(8), nullable=False, server_default="NORMAL")
     compressor_current_a: Mapped[float] = mapped_column(Float, nullable=False)
     discharge_pressure_kpa: Mapped[float] = mapped_column(Float, nullable=False)
     suction_temperature_c: Mapped[float] = mapped_column(Float, nullable=False)

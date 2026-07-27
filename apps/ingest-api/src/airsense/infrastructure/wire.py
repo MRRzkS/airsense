@@ -12,6 +12,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict
 
+from airsense.domain.conditions import DeviceCondition
 from airsense.domain.scoring import ScoredReading
 from airsense.domain.telemetry import Channel, DeviceId, SensorReading
 
@@ -28,6 +29,7 @@ class TelemetryMessage(BaseModel):
     ambient_temperature_c: float
     vibration_rms_mm_s: float
     health_index: float | None = None
+    condition: DeviceCondition = DeviceCondition.NORMAL
 
     def to_domain(self) -> SensorReading:
         """Convert to the domain type, applying its physical invariants."""
@@ -45,7 +47,11 @@ class TelemetryMessage(BaseModel):
         )
 
     def to_scored(self) -> ScoredReading:
-        return ScoredReading(reading=self.to_domain(), health_index=self.health_index)
+        return ScoredReading(
+            reading=self.to_domain(),
+            health_index=self.health_index,
+            condition=self.condition,
+        )
 
     @classmethod
     def from_scored(cls, scored: ScoredReading) -> Self:
@@ -60,4 +66,5 @@ class TelemetryMessage(BaseModel):
             ambient_temperature_c=reading.ambient_temperature_c,
             vibration_rms_mm_s=reading.vibration_rms_mm_s,
             health_index=scored.health_index,
+            condition=scored.condition,
         )

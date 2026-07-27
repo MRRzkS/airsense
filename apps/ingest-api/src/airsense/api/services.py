@@ -2,7 +2,8 @@
 
 `app.state` is untyped, so routers reach their collaborators through this
 instead of poking at attributes the type checker cannot see. Every field is a
-port, which is what lets the test suite substitute in-memory doubles.
+port or a use case, which is what lets the test suite substitute in-memory
+doubles.
 """
 
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ from dataclasses import dataclass
 from airsense.application.ports.health import DependencyHealth
 from airsense.application.ports.telemetry import TelemetryStream
 from airsense.application.use_cases.ingest_reading import IngestReading
+from airsense.application.use_cases.list_tickets import ListTickets
 from airsense.application.use_cases.query_fleet import ListFleet, ReadHistory
 
 
@@ -20,3 +22,4 @@ class Services:
     ingest: IngestReading
     list_fleet: ListFleet
     read_history: ReadHistory
+    list_tickets: ListTickets

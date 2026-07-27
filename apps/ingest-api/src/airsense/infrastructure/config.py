@@ -44,6 +44,32 @@ class Settings(BaseSettings):
 
     model_dir: Path = Path("models")
 
+    # ─── Domain rule thresholds ───────────────────────────────────────────
+    # Defaults live here, not in the domain: the rules take their thresholds as
+    # arguments so they can be exercised at values a test chooses. These are the
+    # values the running system uses, and every one is overridable by env var.
+    #
+    # Entry/exit gaps of 0.10 give the deadband. Five sustained samples is five
+    # seconds at the simulator's pacing — long enough to reject a spike, short
+    # enough to stay inside a reviewer's ten-second window.
+    watch_enter: float = 0.50
+    watch_exit: float = 0.40
+    alert_enter: float = 0.75
+    alert_exit: float = 0.65
+    sustained_samples: int = 5
+
+    severity_medium_band: float = 0.60
+    severity_high_band: float = 0.75
+    severity_critical_band: float = 0.90
+    # Health index per sample. At ~0.008 a device crosses a full severity band
+    # in roughly a minute of replay, which is the point at which "how fast" is
+    # worth more than "how bad".
+    fast_degradation_per_sample: float = 0.008
+
+    ticket_cooldown_minutes: int = 30
+    # Enough to satisfy the longest debounce window and still measure a slope.
+    condition_history_samples: int = 20
+
     @property
     def model_path(self) -> Path:
         return self.model_dir / "compressor_degradation.onnx"
