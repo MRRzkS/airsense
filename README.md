@@ -6,16 +6,37 @@
 > with the diagnostic code attached — before the customer notices anything is
 > wrong.
 
-**Status: P2 complete.** Telemetry flows end to end — simulator → MQTT →
-ingest → TimescaleDB hypertable → Redis → SSE → live chart — and a degradation
-score, produced by an ONNX model scored in-process, climbs alongside the sensor
-trace. The rules engine and CRM ticketing are P3. See
-[docs/architecture.md](docs/architecture.md) for the phase table.
+**Status: P3 complete — the system does what it says on the tin.** Telemetry
+flows simulator → MQTT → ingest → TimescaleDB → Redis → SSE → dashboard; an
+ONNX model scores compressor degradation in-process; and when a score stays
+elevated, the rules engine opens a support ticket in the CRM panel with a device
+ID, a diagnostic code and a severity. The Inject Fault button and deployment are
+P4. See [docs/architecture.md](docs/architecture.md) for the phase table.
 
 The model is a gradient-boosted health-index regressor trained on NASA C-MAPSS
 FD001. Held-out **R² 0.79**, and at a 0.5 threshold it flagged **all 20 held-out
 units** with a median of 21 samples' warning. Full numbers and caveats in
 [ml/artifacts/model_card.md](ml/artifacts/model_card.md).
+
+## The part worth reading
+
+Most builds of this fire a ticket the instant a threshold is crossed. Four rules
+separate a demo from a system, and they carry **77 of the repository's 162
+tests**:
+
+1. **Hysteresis and debounce** — a transition needs five sustained samples, and
+   entry/exit thresholds are separated by a deadband so a score oscillating on
+   the line produces *zero* transitions rather than twenty.
+2. **Ticket deduplication** — at most one open ticket per (device, fault class);
+   re-alerting escalates severity instead of filing again, and severity ratchets
+   upward only.
+3. **Severity mapping** — score band *and* rate of change, because a unit parked
+   at 0.62 and one that reached 0.62 this morning need different responses.
+4. **Cooldown** — a closed ticket cannot re-open for a quiet period, so a unit
+   sitting on the threshold cannot fill the CRM with churn.
+
+Each is a stdlib-only policy object in `domain/`, with its reasoning written
+down in [docs/domain-rules.md](docs/domain-rules.md).
 
 The demo GIF, the four domain rules, and the **Limitations and Honest Scope**
 section land in P5. That last section is not optional: it will state which

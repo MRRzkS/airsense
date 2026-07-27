@@ -79,6 +79,6 @@ the same event loop — is listed in the README's Limitations section.
 | P0 | skeleton, compose, CI, health, import-linter | done |
 | P1 | simulator → MQTT → ingest → Timescale → SSE → chart | done |
 | P2 | offline training, ONNX export, in-process scoring | done |
-| P3 | four domain rules, TicketSink, CRM panel | pending |
+| P3 | four domain rules, TicketSink, CRM panel | done |
 | P4 | HubSpot adapter, Inject Fault, deploy | pending |
 | P5 | README, diagram, video, Limitations | pending |
