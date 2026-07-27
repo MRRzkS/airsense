@@ -12,6 +12,7 @@ import {
   type Reading,
   fetchFleet,
   fetchHistory,
+  formatScore,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -97,8 +98,12 @@ export default function App() {
         <section className="space-y-3">
           <div className="flex items-baseline gap-2">
             <h1 className="font-mono text-sm font-medium">{active ?? "No device selected"}</h1>
-            <span className="tabular text-xs text-muted-foreground">
-              {series.length} samples
+            <span className="tabular text-xs text-muted-foreground">{series.length} samples</span>
+            <span className="ml-auto flex items-baseline gap-1.5">
+              <span className="text-[0.6875rem] text-muted-foreground">degradation</span>
+              <span className="tabular font-mono text-lg leading-none text-state-watch">
+                {formatScore(series.at(-1)?.health_index ?? null)}
+              </span>
             </span>
           </div>
 

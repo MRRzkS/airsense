@@ -52,6 +52,18 @@ Writes are ordered persist → cache → publish. History is the only durable
 record, so a dashboard that misses a frame recovers on the next one, whereas a
 reading dropped before persistence is gone.
 
+## Scoring
+
+The feature vector is defined in `domain/features.py`, not in the model code:
+*what characterises degradation* is a domain decision. Offline training builds
+the same twenty-value vector from the same definition, and `feature_spec.json`
+is committed alongside the model so a test on each side fails if the two ever
+drift.
+
+Scores are `float | None`. A device that has not yet reported a full window is
+stored unscored — `0.0` would be indistinguishable from a genuinely healthy
+unit, and P3's rules would act on it.
+
 ## Why scoring is in-process
 
 A separate model-serving service is the correct production answer and the wrong
@@ -66,7 +78,7 @@ the same event loop — is listed in the README's Limitations section.
 | ----- | ----- | ----- |
 | P0 | skeleton, compose, CI, health, import-linter | done |
 | P1 | simulator → MQTT → ingest → Timescale → SSE → chart | done |
-| P2 | offline training, ONNX export, in-process scoring | pending |
+| P2 | offline training, ONNX export, in-process scoring | done |
 | P3 | four domain rules, TicketSink, CRM panel | pending |
 | P4 | HubSpot adapter, Inject Fault, deploy | pending |
 | P5 | README, diagram, video, Limitations | pending |

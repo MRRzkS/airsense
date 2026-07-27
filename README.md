@@ -6,10 +6,16 @@
 > with the diagnostic code attached — before the customer notices anything is
 > wrong.
 
-**Status: P1 complete.** Telemetry flows end to end — simulator → MQTT →
-ingest → TimescaleDB hypertable → Redis → SSE → live chart. No model and no
-rules yet; those are P2 and P3. See [docs/architecture.md](docs/architecture.md)
-for the phase table.
+**Status: P2 complete.** Telemetry flows end to end — simulator → MQTT →
+ingest → TimescaleDB hypertable → Redis → SSE → live chart — and a degradation
+score, produced by an ONNX model scored in-process, climbs alongside the sensor
+trace. The rules engine and CRM ticketing are P3. See
+[docs/architecture.md](docs/architecture.md) for the phase table.
+
+The model is a gradient-boosted health-index regressor trained on NASA C-MAPSS
+FD001. Held-out **R² 0.79**, and at a 0.5 threshold it flagged **all 20 held-out
+units** with a median of 21 samples' warning. Full numbers and caveats in
+[ml/artifacts/model_card.md](ml/artifacts/model_card.md).
 
 The demo GIF, the four domain rules, and the **Limitations and Honest Scope**
 section land in P5. That last section is not optional: it will state which

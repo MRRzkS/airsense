@@ -76,13 +76,21 @@ jobs:
     needs: [backend, frontend]
     strategy:
       matrix:
-        app: [ingest-api, device-simulator, dashboard]
+        include:
+          # ingest-api builds from the repository root so it can copy ml/artifacts.
+          - app: ingest-api
+            context: .
+          - app: device-simulator
+            context: apps/device-simulator
+          - app: dashboard
+            context: apps/dashboard
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
-          context: apps/${{ matrix.app }}
+          context: ${{ matrix.context }}
+          file: apps/${{ matrix.app }}/Dockerfile
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max

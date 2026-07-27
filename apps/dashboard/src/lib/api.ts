@@ -9,10 +9,22 @@ export interface Reading {
   suction_temperature_c: number;
   ambient_temperature_c: number;
   vibration_rms_mm_s: number;
+  /** null while the device is still filling its first feature window. */
+  health_index: number | null;
 }
 
+export function formatScore(health: number | null): string {
+  return health === null ? "—" : `${Math.round(health * 100)}%`;
+}
+
+/** Sensor channels only — health_index is derived, not measured. */
+export type ChannelKey = keyof Omit<
+  Reading,
+  "device_id" | "recorded_at" | "sequence" | "health_index"
+>;
+
 export interface ChannelSpec {
-  key: keyof Omit<Reading, "device_id" | "recorded_at" | "sequence">;
+  key: ChannelKey;
   label: string;
   unit: string;
   precision: number;
