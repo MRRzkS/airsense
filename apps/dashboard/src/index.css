@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Palette: "control room", not stock shadcn slate. A cool near-black with a
+   blue cast, three raised surface steps, and three status hues that are
+   distinguishable from each other for the common forms of colour blindness
+   (teal / amber / red-orange rather than green / yellow / red).
+   Every pair below was checked against WCAG AA; see README. */
+@layer base {
+  :root {
+    --background: 213 29% 6%;
+    --foreground: 210 29% 92%;
+
+    --card: 214 28% 10%;
+    --card-foreground: 210 29% 92%;
+
+    --popover: 213 26% 14%;
+    --popover-foreground: 210 29% 92%;
+
+    --primary: 188 72% 47%;
+    --primary-foreground: 213 29% 6%;
+
+    --secondary: 213 26% 14%;
+    --secondary-foreground: 210 29% 92%;
+
+    --muted: 213 26% 14%;
+    --muted-foreground: 211 15% 58%;
+
+    --accent: 213 26% 18%;
+    --accent-foreground: 210 29% 92%;
+
+    --destructive: 5 100% 65%;
+    --destructive-foreground: 213 29% 6%;
+
+    --border: 213 24% 18%;
+    --input: 213 24% 18%;
+    --ring: 188 72% 47%;
+
+    /* Device condition. Named for the domain state, not for the colour, so a
+       future palette change cannot silently invert the meaning. */
+    --state-normal: 164 66% 50%;
+    --state-watch: 38 87% 59%;
+    --state-alert: 5 100% 65%;
+
+    --radius: 0.375rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv05" 1;
+  }
+
+  /* Live values re-render every second. Tabular figures keep digit columns
+     from shifting width as the numbers change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
