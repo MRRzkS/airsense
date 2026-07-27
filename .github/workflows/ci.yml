@@ -23,11 +23,12 @@ jobs:
         run: |
           pip install -e "apps/ingest-api[dev]"
           pip install -e "apps/device-simulator[dev]"
+          pip install -e "ml[dev]"
 
       - name: Lint
         run: |
-          ruff check apps/ingest-api apps/device-simulator
-          ruff format --check apps/ingest-api apps/device-simulator
+          ruff check apps/ingest-api apps/device-simulator ml
+          ruff format --check apps/ingest-api apps/device-simulator ml
 
       - name: Typecheck ingest-api
         working-directory: apps/ingest-api
@@ -47,6 +48,10 @@ jobs:
 
       - name: Test device-simulator
         working-directory: apps/device-simulator
+        run: pytest
+
+      - name: Test channel mapping
+        working-directory: ml
         run: pytest
 
   frontend:

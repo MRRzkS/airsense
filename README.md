@@ -6,8 +6,10 @@
 > with the diagnostic code attached — before the customer notices anything is
 > wrong.
 
-**Status: P0 complete.** The shape is in place and CI is green. No telemetry
-flows yet. See [docs/architecture.md](docs/architecture.md) for the phase table.
+**Status: P1 complete.** Telemetry flows end to end — simulator → MQTT →
+ingest → TimescaleDB hypertable → Redis → SSE → live chart. No model and no
+rules yet; those are P2 and P3. See [docs/architecture.md](docs/architecture.md)
+for the phase table.
 
 The demo GIF, the four domain rules, and the **Limitations and Honest Scope**
 section land in P5. That last section is not optional: it will state which
@@ -30,6 +32,9 @@ cp .env.example .env && make up
 | ingest-api | http://localhost:8000/docs |
 | device-simulator | http://localhost:8001/docs |
 | metrics | http://localhost:8000/metrics |
+
+The replay fixture is committed, so there is no download step. To regenerate it
+from raw C-MAPSS, see [ml/README.md](ml/README.md).
 
 `make` is not available on Windows by default. Every target is a thin wrapper,
 so run the underlying command directly:

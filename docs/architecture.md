@@ -34,6 +34,24 @@ api  ──▶  infrastructure  ──▶  application  ──▶  domain
 This is enforced by two import-linter contracts in
 `apps/ingest-api/pyproject.toml` and checked in CI, not left to review.
 
+## The telemetry path
+
+One MQTT topic per device (`airsense/telemetry/AC-0001`), QoS 1. Ingest is
+idempotent on `(recorded_at, device_id)` via an upsert, so at-least-once
+delivery and a device replaying its last frame after reconnect are both
+absorbed rather than erroring.
+
+`TelemetryMessage` in `infrastructure/wire.py` is the single wire shape: MQTT
+payloads, Redis pub/sub frames and SSE events all use it, so there is one parser
+and one serializer instead of three that drift. It rejects unknown fields, and
+conversion to the domain type applies the physical envelope in
+`domain/telemetry.py` — a value outside it is a sensor or transport fault, not a
+reading, and is counted in `airsense_readings_rejected_total`.
+
+Writes are ordered persist → cache → publish. History is the only durable
+record, so a dashboard that misses a frame recovers on the next one, whereas a
+reading dropped before persistence is gone.
+
 ## Why scoring is in-process
 
 A separate model-serving service is the correct production answer and the wrong
@@ -47,7 +65,7 @@ the same event loop — is listed in the README's Limitations section.
 | Phase | Scope | State |
 | ----- | ----- | ----- |
 | P0 | skeleton, compose, CI, health, import-linter | done |
-| P1 | simulator → MQTT → ingest → Timescale → SSE → chart | pending |
+| P1 | simulator → MQTT → ingest → Timescale → SSE → chart | done |
 | P2 | offline training, ONNX export, in-process scoring | pending |
 | P3 | four domain rules, TicketSink, CRM panel | pending |
 | P4 | HubSpot adapter, Inject Fault, deploy | pending |
