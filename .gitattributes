@@ -1,0 +1,13 @@
+# The repo is authored on Windows but every script, config and Dockerfile in it
+# executes inside a Linux container. CRLF would break the Makefile and shell
+# entrypoints, so normalise to LF regardless of the checkout platform.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.parquet binary
+*.onnx binary

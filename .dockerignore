@@ -1,0 +1,16 @@
+**/.git
+**/.venv
+**/venv
+**/node_modules
+**/__pycache__
+**/*.py[cod]
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/dist
+**/build
+**/.env
+**/data/raw
+docs/
+deploy/
+*.md

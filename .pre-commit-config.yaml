@@ -1,0 +1,40 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Run from the app directory so each pyproject's own config applies.
+  - repo: local
+    hooks:
+      - id: mypy-ingest-api
+        name: mypy (ingest-api)
+        entry: bash -c 'cd apps/ingest-api && mypy src'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: import-linter
+        name: layering contracts
+        entry: bash -c 'cd apps/ingest-api && lint-imports'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: prettier
+        name: prettier (dashboard)
+        entry: npm --prefix apps/dashboard exec -- prettier --write
+        language: system
+        files: ^apps/dashboard/.*\.(ts|tsx|css|json)$
