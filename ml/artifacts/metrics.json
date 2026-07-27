@@ -1,0 +1,28 @@
+{
+  "held_out": {
+    "rmse": 0.15334475947569023,
+    "mae": 0.11861925850460471,
+    "r2": 0.7876213408767185
+  },
+  "training": {
+    "rmse": 0.1313563962835203,
+    "mae": 0.09956177207577137,
+    "r2": 0.8414758460782814
+  },
+  "warning_lead_time": {
+    "threshold": 0.5,
+    "median_lead_samples": 21.0,
+    "mean_lead_samples": 22.95,
+    "min_lead_samples": 13.0,
+    "units_never_flagged": 0.0,
+    "units_evaluated": 20.0
+  },
+  "rows": {
+    "train": 3979,
+    "test": 1026
+  },
+  "units": {
+    "train": 80,
+    "test": 20
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "window_size": 20,
+  "input_name": "features",
+  "features": [
+    "compressor_current_a__value",
+    "compressor_current_a__mean",
+    "compressor_current_a__std",
+    "compressor_current_a__delta",
+    "discharge_pressure_kpa__value",
+    "discharge_pressure_kpa__mean",
+    "discharge_pressure_kpa__std",
+    "discharge_pressure_kpa__delta",
+    "suction_temperature_c__value",
+    "suction_temperature_c__mean",
+    "suction_temperature_c__std",
+    "suction_temperature_c__delta",
+    "ambient_temperature_c__value",
+    "ambient_temperature_c__mean",
+    "ambient_temperature_c__std",
+    "ambient_temperature_c__delta",
+    "vibration_rms_mm_s__value",
+    "vibration_rms_mm_s__mean",
+    "vibration_rms_mm_s__std",
+    "vibration_rms_mm_s__delta"
+  ],
+  "label": "health_index",
+  "knee_samples": 42
+}
