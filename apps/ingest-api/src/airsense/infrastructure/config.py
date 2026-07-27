@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     mqtt_host: str
     mqtt_port: int = 1883
     mqtt_topic_prefix: str = "airsense/telemetry"
+    mqtt_client_id: str = "airsense-ingest"
 
     ticket_sink: TicketSinkName = "memory"
     hubspot_access_token: str | None = None

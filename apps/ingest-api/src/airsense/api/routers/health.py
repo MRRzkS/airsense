@@ -1,9 +1,9 @@
 """Liveness and readiness probes consumed by compose healthchecks and CI."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
-from airsense.api.deps import SettingsDep
+from airsense.api.deps import ServicesDep, SettingsDep
 
 router = APIRouter(tags=["health"])
 
@@ -32,12 +32,14 @@ async def health(settings: SettingsDep) -> HealthResponse:
 
 
 @router.get("/ready", summary="Readiness probe")
-async def ready(settings: SettingsDep) -> ReadinessResponse:
+async def ready(services: ServicesDep, response: Response) -> ReadinessResponse:
     """Report whether every downstream dependency is reachable.
 
-    Returns an empty check map until the database, cache and broker clients are
-    wired in P1; the contract is that an empty map means nothing is claimed.
+    Answers 503 when any check fails so a load balancer stops routing here,
+    while still naming the failing dependency in the body.
     """
-    checks: dict[str, str] = {}
-    status = "ready" if all(v == "ok" for v in checks.values()) else "degraded"
-    return ReadinessResponse(status=status, checks=checks)
+    checks = await services.probe.check()
+    ready = all(value == "ok" for value in checks.values())
+    if not ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return ReadinessResponse(status="ready" if ready else "degraded", checks=checks)
