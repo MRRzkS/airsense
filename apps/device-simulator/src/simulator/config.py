@@ -1,6 +1,7 @@
 """Simulator configuration, sourced entirely from the environment."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,8 +21,10 @@ class Settings(BaseSettings):
     mqtt_host: str
     mqtt_port: int = 1883
     mqtt_topic_prefix: str = "airsense/telemetry"
+    mqtt_client_id: str = "airsense-simulator"
 
     publish_interval_seconds: float = 1.0
+    fixture_path: Path = Path("data/replay_fd001.parquet")
 
     @property
     def emit_json_logs(self) -> bool:
