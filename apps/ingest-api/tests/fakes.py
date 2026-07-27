@@ -9,8 +9,11 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
+from airsense.domain.conditions import ConditionPolicy, ConditionState, DeviceCondition
 from airsense.domain.scoring import ScoredReading
+from airsense.domain.severity import SeverityPolicy
 from airsense.domain.telemetry import Channel, DeviceId, SensorReading
+from airsense.domain.ticketing import TicketPolicy
 
 NOMINAL: dict[Channel, float] = {
     Channel.COMPRESSOR_CURRENT: 4.6,
@@ -43,12 +46,44 @@ def make_scored(
     device_id: str = "AC-0001",
     sequence: int = 0,
     health_index: float | None = None,
+    condition: DeviceCondition = DeviceCondition.NORMAL,
     **overrides: float,
 ) -> ScoredReading:
     return ScoredReading(
         reading=make_reading(device_id, sequence, **overrides),
         health_index=health_index,
+        condition=condition,
     )
+
+
+# Shared policy values for tests that exercise orchestration rather than
+# thresholds. Rule tests build their own so the numbers under test are visible
+# in the test that depends on them.
+DEMO_CONDITION_POLICY = ConditionPolicy(
+    watch_enter=0.50,
+    watch_exit=0.40,
+    alert_enter=0.75,
+    alert_exit=0.65,
+    sustained_samples=3,
+)
+DEMO_SEVERITY_POLICY = SeverityPolicy(
+    medium_band=0.60,
+    high_band=0.75,
+    critical_band=0.90,
+    fast_degradation_per_sample=0.05,
+)
+DEMO_TICKET_POLICY = TicketPolicy(cooldown=timedelta(minutes=30))
+
+
+@dataclass(slots=True)
+class InMemoryConditionStore:
+    states: dict[str, ConditionState] = field(default_factory=dict)
+
+    async def load(self, device_id: DeviceId) -> ConditionState:
+        return self.states.get(device_id.value, ConditionState())
+
+    async def save(self, device_id: DeviceId, state: ConditionState) -> None:
+        self.states[device_id.value] = state
 
 
 @dataclass(slots=True)

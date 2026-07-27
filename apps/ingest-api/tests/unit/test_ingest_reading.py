@@ -4,15 +4,32 @@ from dataclasses import dataclass
 
 import pytest
 
+from airsense.application.use_cases.assess_degradation import AssessDegradation
 from airsense.application.use_cases.ingest_reading import IngestReading
+from airsense.infrastructure.crm.memory import InMemoryTicketSink
 from tests.fakes import (
+    DEMO_CONDITION_POLICY,
+    DEMO_SEVERITY_POLICY,
+    DEMO_TICKET_POLICY,
     ExplodingReadingRepository,
+    InMemoryConditionStore,
     InMemoryReadingRepository,
     InMemorySnapshot,
     InMemoryStream,
     StubScorer,
     make_reading,
 )
+
+
+def build_assessment() -> AssessDegradation:
+    return AssessDegradation(
+        conditions=InMemoryConditionStore(),
+        sink=InMemoryTicketSink(),
+        condition_policy=DEMO_CONDITION_POLICY,
+        severity_policy=DEMO_SEVERITY_POLICY,
+        ticket_policy=DEMO_TICKET_POLICY,
+        history_samples=20,
+    )
 
 
 @dataclass(slots=True)
@@ -31,7 +48,11 @@ def build_rig(score: float | None = 0.25) -> Rig:
     scorer = StubScorer(value=score)
     return Rig(
         ingest=IngestReading(
-            repository=repository, snapshot=snapshot, stream=stream, scorer=scorer
+            repository=repository,
+            snapshot=snapshot,
+            stream=stream,
+            scorer=scorer,
+            assess=build_assessment(),
         ),
         repository=repository,
         snapshot=snapshot,
@@ -81,6 +102,7 @@ async def test_a_failed_write_does_not_fan_out() -> None:
         snapshot=snapshot,
         stream=stream,
         scorer=StubScorer(),
+        assess=build_assessment(),
     )
 
     with pytest.raises(RuntimeError, match="database unavailable"):
