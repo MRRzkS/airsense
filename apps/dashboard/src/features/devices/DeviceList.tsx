@@ -1,3 +1,4 @@
+import { StateBadge } from "@/features/devices/StateBadge";
 import { type Reading, formatScore } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -49,13 +50,14 @@ export function DeviceList({ devices, latest, selected, onSelect }: DeviceListPr
                   : "border-transparent hover:border-border hover:bg-card",
               )}
             >
-              <span className="flex items-baseline gap-2">
+              <span className="flex items-center gap-2">
                 <span className="font-mono text-xs font-medium">{deviceId}</span>
                 <span className="tabular ml-auto font-mono text-xs text-muted-foreground">
                   {formatScore(health)}
                 </span>
               </span>
               <ScoreBar health={health} />
+              <StateBadge condition={reading?.condition ?? "NORMAL"} />
             </button>
           </li>
         );

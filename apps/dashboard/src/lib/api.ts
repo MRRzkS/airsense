@@ -11,16 +11,33 @@ export interface Reading {
   vibration_rms_mm_s: number;
   /** null while the device is still filling its first feature window. */
   health_index: number | null;
+  condition: DeviceCondition;
+}
+
+export type DeviceCondition = "NORMAL" | "WATCH" | "ALERT";
+
+export type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export interface Ticket {
+  ticket_id: string;
+  device_id: string;
+  fault_class: string;
+  diagnostic_code: string;
+  severity: Severity;
+  status: "OPEN" | "CLOSED";
+  opened_at: string;
+  updated_at: string;
+  closed_at: string | null;
 }
 
 export function formatScore(health: number | null): string {
   return health === null ? "—" : `${Math.round(health * 100)}%`;
 }
 
-/** Sensor channels only — health_index is derived, not measured. */
+/** Sensor channels only — health_index and condition are derived, not measured. */
 export type ChannelKey = keyof Omit<
   Reading,
-  "device_id" | "recorded_at" | "sequence" | "health_index"
+  "device_id" | "recorded_at" | "sequence" | "health_index" | "condition"
 >;
 
 export interface ChannelSpec {
@@ -61,6 +78,10 @@ export function fetchFleet(): Promise<Reading[]> {
 
 export function fetchHistory(deviceId: string, limit = 240): Promise<Reading[]> {
   return getJson<Reading[]>(`/devices/${deviceId}/readings?limit=${limit}`);
+}
+
+export function fetchTickets(limit = 20): Promise<Ticket[]> {
+  return getJson<Ticket[]>(`/tickets?limit=${limit}`);
 }
 
 export function formatValue(value: number, spec: ChannelSpec): string {
