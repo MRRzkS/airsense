@@ -10,6 +10,7 @@ from tests.fakes import (
     InMemorySnapshot,
     InMemoryStream,
     StubDependencyHealth,
+    StubScorer,
 )
 
 # Connection settings have no defaults by design, so the suite supplies them
@@ -28,6 +29,7 @@ class Doubles:
     snapshot: InMemorySnapshot
     stream: InMemoryStream
     probe: StubDependencyHealth
+    scorer: StubScorer
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -44,6 +46,7 @@ def doubles() -> Doubles:
         snapshot=InMemorySnapshot(),
         stream=InMemoryStream(),
         probe=StubDependencyHealth(),
+        scorer=StubScorer(),
     )
 
 
@@ -64,6 +67,7 @@ def client(test_environment: None, doubles: Doubles) -> Iterator[TestClient]:
             repository=doubles.repository,
             snapshot=doubles.snapshot,
             stream=doubles.stream,
+            scorer=doubles.scorer,
         ),
         list_fleet=ListFleet(snapshot=doubles.snapshot),
         read_history=ReadHistory(repository=doubles.repository),

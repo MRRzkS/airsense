@@ -1,6 +1,7 @@
 """Process configuration. The only place a host, port or threshold literal lives."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -40,6 +41,16 @@ class Settings(BaseSettings):
 
     ticket_sink: TicketSinkName = "memory"
     hubspot_access_token: str | None = None
+
+    model_dir: Path = Path("models")
+
+    @property
+    def model_path(self) -> Path:
+        return self.model_dir / "compressor_degradation.onnx"
+
+    @property
+    def feature_spec_path(self) -> Path:
+        return self.model_dir / "feature_spec.json"
 
     @property
     def cors_origins(self) -> list[str]:

@@ -2,6 +2,9 @@
 
 MQTT payloads, Redis pub/sub frames and SSE events all use this shape, so there
 is one parser and one serializer rather than three that can drift apart.
+
+`health_index` is absent inbound (devices do not score themselves) and present
+outbound, which is why it is optional rather than two separate models.
 """
 
 from datetime import datetime
@@ -9,6 +12,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict
 
+from airsense.domain.scoring import ScoredReading
 from airsense.domain.telemetry import Channel, DeviceId, SensorReading
 
 
@@ -23,6 +27,7 @@ class TelemetryMessage(BaseModel):
     suction_temperature_c: float
     ambient_temperature_c: float
     vibration_rms_mm_s: float
+    health_index: float | None = None
 
     def to_domain(self) -> SensorReading:
         """Convert to the domain type, applying its physical invariants."""
@@ -39,8 +44,12 @@ class TelemetryMessage(BaseModel):
             },
         )
 
+    def to_scored(self) -> ScoredReading:
+        return ScoredReading(reading=self.to_domain(), health_index=self.health_index)
+
     @classmethod
-    def from_domain(cls, reading: SensorReading) -> Self:
+    def from_scored(cls, scored: ScoredReading) -> Self:
+        reading = scored.reading
         return cls(
             device_id=reading.device_id.value,
             recorded_at=reading.recorded_at,
@@ -50,4 +59,5 @@ class TelemetryMessage(BaseModel):
             suction_temperature_c=reading.suction_temperature_c,
             ambient_temperature_c=reading.ambient_temperature_c,
             vibration_rms_mm_s=reading.vibration_rms_mm_s,
+            health_index=scored.health_index,
         )

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from tests.conftest import Doubles
-from tests.fakes import make_reading
+from tests.fakes import make_scored
 
 
 def test_fleet_is_empty_before_any_telemetry(client: TestClient) -> None:
@@ -13,8 +13,8 @@ def test_fleet_is_empty_before_any_telemetry(client: TestClient) -> None:
 
 def test_fleet_returns_the_latest_reading_per_device(client: TestClient, doubles: Doubles) -> None:
     doubles.snapshot.by_device = {
-        "AC-0002": make_reading("AC-0002", sequence=3),
-        "AC-0001": make_reading("AC-0001", sequence=7),
+        "AC-0002": make_scored("AC-0002", sequence=3),
+        "AC-0001": make_scored("AC-0001", sequence=7),
     }
 
     body = client.get("/devices").json()
@@ -22,11 +22,22 @@ def test_fleet_returns_the_latest_reading_per_device(client: TestClient, doubles
     assert [entry["device_id"] for entry in body] == ["AC-0001", "AC-0002"]
 
 
+def test_fleet_exposes_the_health_index(client: TestClient, doubles: Doubles) -> None:
+    doubles.snapshot.by_device = {
+        "AC-0001": make_scored("AC-0001", health_index=0.72),
+        "AC-0002": make_scored("AC-0002", health_index=None),
+    }
+
+    body = client.get("/devices").json()
+
+    assert [entry["health_index"] for entry in body] == [0.72, None]
+
+
 def test_history_returns_one_device_oldest_first(client: TestClient, doubles: Doubles) -> None:
     doubles.repository.rows = [
-        make_reading("AC-0001", sequence=0),
-        make_reading("AC-0002", sequence=0),
-        make_reading("AC-0001", sequence=1),
+        make_scored("AC-0001", sequence=0),
+        make_scored("AC-0002", sequence=0),
+        make_scored("AC-0001", sequence=1),
     ]
 
     body = client.get("/devices/AC-0001/readings").json()

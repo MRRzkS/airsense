@@ -17,6 +17,10 @@ class ReadingRow(Base):
     device_id: Mapped[str] = mapped_column(String(16), primary_key=True)
 
     sequence: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Nullable: a device's first WINDOW_SIZE readings arrive before the model
+    # can say anything, and storing 0.0 there would be indistinguishable from
+    # a genuinely healthy score.
+    health_index: Mapped[float | None] = mapped_column(Float, nullable=True)
     compressor_current_a: Mapped[float] = mapped_column(Float, nullable=False)
     discharge_pressure_kpa: Mapped[float] = mapped_column(Float, nullable=False)
     suction_temperature_c: Mapped[float] = mapped_column(Float, nullable=False)

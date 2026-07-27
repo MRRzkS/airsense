@@ -14,12 +14,12 @@ router = APIRouter(tags=["stream"])
 @router.get("/stream", summary="Live telemetry as server-sent events")
 async def stream(request: Request, services: ServicesDep) -> EventSourceResponse:
     async def events() -> AsyncIterator[dict[str, str]]:
-        async for reading in services.stream.subscribe():
+        async for scored in services.stream.subscribe():
             if await request.is_disconnected():
                 break
             yield {
                 "event": "reading",
-                "data": TelemetryMessage.from_domain(reading).model_dump_json(),
+                "data": TelemetryMessage.from_scored(scored).model_dump_json(),
             }
 
     return EventSourceResponse(events())

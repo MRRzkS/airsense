@@ -21,6 +21,7 @@ from airsense.infrastructure.db.reading_repository import TimescaleReadingReposi
 from airsense.infrastructure.db.session import create_engine, create_session_factory
 from airsense.infrastructure.logging import configure_logging
 from airsense.infrastructure.mqtt.subscriber import MqttTelemetrySubscriber
+from airsense.infrastructure.onnx.scorer import create_scorer
 from airsense.infrastructure.probes import DependencyProbe
 from airsense.infrastructure.redis.hub import RedisTelemetryHub, create_client
 
@@ -42,7 +43,12 @@ def build_runtime(settings: Settings) -> Runtime:
     # One Redis adapter satisfies both the snapshot and the stream port.
     hub = RedisTelemetryHub(client)
     repository = TimescaleReadingRepository(create_session_factory(engine))
-    ingest = IngestReading(repository=repository, snapshot=hub, stream=hub)
+    ingest = IngestReading(
+        repository=repository,
+        snapshot=hub,
+        stream=hub,
+        scorer=create_scorer(settings.model_path, settings.feature_spec_path),
+    )
 
     services = Services(
         stream=hub,

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/devices", tags=["devices"])
 @router.get("", summary="Latest reading for every known device")
 async def list_devices(services: ServicesDep) -> list[TelemetryMessage]:
     readings = await services.list_fleet()
-    return [TelemetryMessage.from_domain(reading) for reading in readings]
+    return [TelemetryMessage.from_scored(scored) for scored in readings]
 
 
 @router.get("/{device_id}/readings", summary="Recent history for one device")
@@ -29,4 +29,4 @@ async def read_history(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
 
     readings = await services.read_history(identifier, limit=limit)
-    return [TelemetryMessage.from_domain(reading) for reading in readings]
+    return [TelemetryMessage.from_scored(scored) for scored in readings]

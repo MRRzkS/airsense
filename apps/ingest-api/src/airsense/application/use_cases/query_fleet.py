@@ -3,7 +3,8 @@
 from dataclasses import dataclass
 
 from airsense.application.ports.telemetry import DeviceSnapshot, ReadingRepository
-from airsense.domain.telemetry import DeviceId, SensorReading
+from airsense.domain.scoring import ScoredReading
+from airsense.domain.telemetry import DeviceId
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,9 +13,9 @@ class ListFleet:
 
     snapshot: DeviceSnapshot
 
-    async def __call__(self) -> list[SensorReading]:
+    async def __call__(self) -> list[ScoredReading]:
         readings = await self.snapshot.latest()
-        return sorted(readings, key=lambda r: r.device_id.value)
+        return sorted(readings, key=lambda scored: scored.reading.device_id.value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,5 +24,5 @@ class ReadHistory:
 
     repository: ReadingRepository
 
-    async def __call__(self, device_id: DeviceId, *, limit: int) -> list[SensorReading]:
+    async def __call__(self, device_id: DeviceId, *, limit: int) -> list[ScoredReading]:
         return await self.repository.history(device_id, limit=limit)

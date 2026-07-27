@@ -46,7 +46,9 @@ services:
   # ─── Application ────────────────────────────────────────────────────────
   ingest-api:
     build:
-      context: ./apps/ingest-api
+      # Root context so the image can copy the trained model out of ml/.
+      context: .
+      dockerfile: apps/ingest-api/Dockerfile
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
