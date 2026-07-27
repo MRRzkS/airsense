@@ -54,7 +54,14 @@ TARGET_RANGE: Final[dict[str, tuple[float, float]]] = {
 AMBIENT_MEAN_C: Final = 24.0
 AMBIENT_SWING_C: Final = 6.0
 AMBIENT_NOISE_C: Final = 0.4
-AMBIENT_PERIOD_S: Final = 86_400.0
+
+# Period in samples, not seconds. A unit's whole trajectory stands in for months
+# of service compressed into a couple of minutes of replay, so the day/night
+# cycle has to be expressed in replay time. Getting this wrong is not cosmetic:
+# at 24h against a ~6h trajectory the sine only traverses its rising quarter,
+# which makes ambient climb monotonically and hands the model a spurious
+# correlation with wear. Roughly 2.5 full swings per trajectory keeps it honest.
+AMBIENT_PERIOD_SAMPLES: Final = 45.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,26 +104,30 @@ def _rescale(
     return (lo_out + normalized * (hi_out - lo_out)).clip(min(target), max(target))
 
 
-def synthesize_ambient(seconds: np.ndarray, *, rng: np.random.Generator) -> np.ndarray:
-    """Generate outdoor temperature.
+def synthesize_ambient(
+    sample_index: np.ndarray, *, phase: float, rng: np.random.Generator
+) -> np.ndarray:
+    """Generate outdoor temperature for one unit's trajectory.
 
     Synthesized rather than mapped: ambient temperature is genuinely
     independent of compressor health, and borrowing a degrading turbofan
     channel for it would fabricate a correlation the model could then exploit.
+    `phase` decorrelates units from each other so the fleet does not warm and
+    cool in lockstep.
     """
-    diurnal = AMBIENT_MEAN_C + AMBIENT_SWING_C * np.sin(2 * np.pi * seconds / AMBIENT_PERIOD_S)
-    return diurnal + rng.normal(0.0, AMBIENT_NOISE_C, size=seconds.shape)
+    angle = 2 * np.pi * (sample_index / AMBIENT_PERIOD_SAMPLES + phase)
+    swing = AMBIENT_MEAN_C + AMBIENT_SWING_C * np.sin(angle)
+    return swing + rng.normal(0.0, AMBIENT_NOISE_C, size=sample_index.shape)
 
 
 def to_ac_channels(
     frame: pd.DataFrame,
     calibration: Calibration,
     *,
-    sample_interval_s: float,
     rng: np.random.Generator,
 ) -> pd.DataFrame:
     """Rescale C-MAPSS sensors into split-AC channels, preserving direction."""
-    mapped = pd.DataFrame({"unit": frame["unit"], "cycle": frame["cycle"]})
+    mapped = pd.DataFrame({"unit": frame["unit"], "cycle": frame["cycle"]}, index=frame.index)
     for channel, sensor in SOURCE_SENSOR.items():
         mapped[channel] = _rescale(
             frame[sensor],
@@ -125,6 +136,12 @@ def to_ac_channels(
             target=TARGET_RANGE[channel],
         )
 
-    elapsed = (frame["cycle"].to_numpy() - 1) * sample_interval_s
-    mapped["ambient_temperature_c"] = synthesize_ambient(elapsed, rng=rng)
+    position = frame.groupby("unit").cumcount()
+    ambient = pd.Series(0.0, index=frame.index, dtype=float)
+    for unit in frame["unit"].unique():
+        rows = frame["unit"] == unit
+        ambient.loc[rows] = synthesize_ambient(
+            position[rows].to_numpy(), phase=float(rng.random()), rng=rng
+        )
+    mapped["ambient_temperature_c"] = ambient
     return mapped

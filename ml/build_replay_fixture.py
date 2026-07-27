@@ -25,7 +25,7 @@ CHANNEL_COLUMNS = [
 ]
 
 
-def build(raw: Path, *, units: int, stride: int, interval: float) -> pd.DataFrame:
+def build(raw: Path, *, units: int, stride: int) -> pd.DataFrame:
     frame = load_raw(raw)
     calibration = Calibration.fit(frame)
 
@@ -38,12 +38,7 @@ def build(raw: Path, *, units: int, stride: int, interval: float) -> pd.DataFram
     selected = frame[frame["unit"].isin(chosen)]
     selected = selected[selected["cycle"] % stride == 1]
 
-    mapped = to_ac_channels(
-        selected,
-        calibration,
-        sample_interval_s=interval,
-        rng=np.random.default_rng(SEED),
-    )
+    mapped = to_ac_channels(selected, calibration, rng=np.random.default_rng(SEED))
     mapped["device_id"] = mapped["unit"].map(device_ids)
     mapped["sequence"] = mapped.groupby("device_id").cumcount()
 
@@ -66,10 +61,9 @@ def main() -> None:
     )
     parser.add_argument("--units", type=int, default=4, help="devices in the demo fleet")
     parser.add_argument("--stride", type=int, default=3, help="keep every Nth cycle")
-    parser.add_argument("--interval", type=float, default=60.0, help="seconds per retained cycle")
     args = parser.parse_args()
 
-    fixture = build(args.raw, units=args.units, stride=args.stride, interval=args.interval)
+    fixture = build(args.raw, units=args.units, stride=args.stride)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fixture.to_parquet(args.out, index=False, compression="zstd")
 

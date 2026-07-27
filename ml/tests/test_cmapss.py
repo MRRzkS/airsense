@@ -10,28 +10,32 @@ from cmapss import (
     to_ac_channels,
 )
 
+# Close to a real FD001 trajectory after the builder's stride-3 downsample.
+TRAJECTORY_SAMPLES = 110
 
-def synthetic_cmapss(rows: int = 200) -> pd.DataFrame:
+
+def synthetic_cmapss(rows: int = TRAJECTORY_SAMPLES, units: int = 1) -> pd.DataFrame:
     """A C-MAPSS-shaped frame whose informative sensors drift monotonically."""
-    cycle = np.arange(1, rows + 1)
-    progress = cycle / rows
-    frame = pd.DataFrame({"unit": 1, "cycle": cycle})
-    frame["s11"] = 46.0 + 2.0 * progress
-    frame["s7"] = 553.0 - 6.0 * progress
-    frame["s2"] = 641.0 + 1.5 * progress
-    frame["s4"] = 1400.0 + 40.0 * progress
-    return frame
+    frames = []
+    for unit in range(1, units + 1):
+        cycle = np.arange(1, rows + 1)
+        progress = cycle / rows
+        frame = pd.DataFrame({"unit": unit, "cycle": cycle})
+        frame["s11"] = 46.0 + 2.0 * progress
+        frame["s7"] = 553.0 - 6.0 * progress
+        frame["s2"] = 641.0 + 1.5 * progress
+        frame["s4"] = 1400.0 + 40.0 * progress
+        frames.append(frame)
+    return pd.concat(frames, ignore_index=True)
+
+
+def map_frame(frame: pd.DataFrame, seed: int = 0) -> pd.DataFrame:
+    return to_ac_channels(frame, Calibration.fit(frame), rng=np.random.default_rng(seed))
 
 
 @pytest.fixture
 def mapped() -> pd.DataFrame:
-    frame = synthetic_cmapss()
-    return to_ac_channels(
-        frame,
-        Calibration.fit(frame),
-        sample_interval_s=60.0,
-        rng=np.random.default_rng(0),
-    )
+    return map_frame(synthetic_cmapss())
 
 
 @pytest.mark.parametrize("channel", list(TARGET_RANGE))
@@ -54,26 +58,49 @@ def test_falling_discharge_pressure_survives_the_mapping(mapped: pd.DataFrame) -
     assert mapped["discharge_pressure_kpa"].iloc[-1] < mapped["discharge_pressure_kpa"].iloc[0]
 
 
-def test_ambient_is_independent_of_degradation() -> None:
+def test_ambient_does_not_track_wear_over_a_full_trajectory() -> None:
+    # Regression: with the diurnal period set in wall-clock seconds, a
+    # trajectory covered only the rising quarter of the sine, so ambient
+    # climbed monotonically and leaked degradation into a channel that is
+    # supposed to be independent of it.
+    frame = synthetic_cmapss()
+    mapped = map_frame(frame)
+    progress = frame["cycle"] / frame["cycle"].max()
+
+    correlation = float(mapped["ambient_temperature_c"].corr(progress))
+
+    assert abs(correlation) < 0.25, f"ambient leaks wear (corr={correlation:.3f})"
+
+
+def test_ambient_is_unchanged_by_degradation_severity() -> None:
     frame = synthetic_cmapss()
     degraded = frame.copy()
     for sensor in SOURCE_SENSOR.values():
         degraded[sensor] = degraded[sensor] * 1.5
 
-    kwargs = {"sample_interval_s": 60.0}
-    baseline = to_ac_channels(frame, Calibration.fit(frame), rng=np.random.default_rng(7), **kwargs)
-    shifted = to_ac_channels(
-        degraded, Calibration.fit(degraded), rng=np.random.default_rng(7), **kwargs
-    )
+    baseline = map_frame(frame, seed=7)
+    shifted = map_frame(degraded, seed=7)
 
     pd.testing.assert_series_equal(
         baseline["ambient_temperature_c"], shifted["ambient_temperature_c"]
     )
 
 
-def test_ambient_follows_a_diurnal_swing() -> None:
-    seconds = np.linspace(0, 86_400, 400)
-    ambient = synthesize_ambient(seconds, rng=np.random.default_rng(1))
+def test_units_do_not_swing_in_lockstep() -> None:
+    # A per-unit phase offset; otherwise the whole fleet warms and cools
+    # together, which no real installed base does.
+    mapped = map_frame(synthetic_cmapss(units=2))
+    first, second = (
+        mapped[mapped["unit"] == unit]["ambient_temperature_c"].to_numpy() for unit in (1, 2)
+    )
+
+    assert not np.allclose(first, second, atol=0.5)
+
+
+def test_ambient_covers_a_realistic_daily_span() -> None:
+    ambient = synthesize_ambient(
+        np.arange(TRAJECTORY_SAMPLES), phase=0.0, rng=np.random.default_rng(1)
+    )
 
     assert 20.0 < float(ambient.mean()) < 28.0
     assert float(ambient.max() - ambient.min()) > 8.0
@@ -85,9 +112,4 @@ def test_degenerate_calibration_is_rejected() -> None:
         frame[sensor] = 1.0
 
     with pytest.raises(ValueError, match="degenerate calibration"):
-        to_ac_channels(
-            frame,
-            Calibration.fit(frame),
-            sample_interval_s=60.0,
-            rng=np.random.default_rng(0),
-        )
+        map_frame(frame)
