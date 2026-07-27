@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "airsense-ml"
+version = "0.1.0"
+description = "Offline training and ONNX export for compressor degradation scoring"
+requires-python = ">=3.12"
+# Only what the fixture builder and the mapping tests need. Training pulls in
+# far heavier wheels and is not needed to verify the mapping, so it is an extra.
+dependencies = [
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "pyarrow>=18.0",
+]
+
+[project.optional-dependencies]
+train = [
+    "scikit-learn>=1.5",
+    "xgboost>=2.1",
+    "skl2onnx>=1.17",
+    "onnx>=1.17",
+    "onnxruntime>=1.20",
+]
+dev = ["pytest>=8.3", "ruff>=0.8"]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["cmapss.py", "build_replay_fixture.py"]
+sources = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "A", "C4", "DTZ", "T20", "SIM", "PTH", "RUF"]
+
+[tool.ruff.lint.isort]
+# Flat layout: these are local modules, not third-party packages.
+known-first-party = ["cmapss", "build_replay_fixture"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
