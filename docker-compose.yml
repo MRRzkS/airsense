@@ -88,7 +88,10 @@ services:
       MQTT_HOST: mosquitto
       MQTT_PORT: 1883
       MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX:-airsense/telemetry}
-      PUBLISH_INTERVAL_SECONDS: ${SIMULATOR_PUBLISH_INTERVAL_SECONDS:-1.0}
+      PUBLISH_INTERVAL_SECONDS: ${SIMULATOR_PUBLISH_INTERVAL_SECONDS:-0.2}
+      # The dashboard calls this service directly for fault injection.
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000}
+      INJECT_RATE_LIMIT: ${INJECT_RATE_LIMIT:-10/minute}
     ports:
       - "${SIMULATOR_API_PORT:-8001}:8001"
     volumes:

@@ -18,5 +18,7 @@ def test_environment() -> Iterator[None]:
 def client(test_environment: None) -> Iterator[TestClient]:
     from simulator.api import create_app
 
-    with TestClient(create_app()) as test_client:
-        yield test_client
+    # Constructed without the context manager on purpose: entering it would run
+    # lifespan, which loads the real fixture and starts a replay task that
+    # retries against a broker that is not there. Tests attach their own engine.
+    yield TestClient(create_app())
