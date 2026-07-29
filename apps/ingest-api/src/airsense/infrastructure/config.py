@@ -41,6 +41,11 @@ class Settings(BaseSettings):
 
     ticket_sink: TicketSinkName = "memory"
     hubspot_access_token: str | None = None
+    # Pipeline and stage identifiers are per-account; there is no sensible
+    # default, and a wrong one files tickets into a stage nobody watches.
+    hubspot_pipeline: str = "0"
+    hubspot_open_stage: str = "1"
+    hubspot_closed_stage: str = "4"
 
     model_dir: Path = Path("models")
 
