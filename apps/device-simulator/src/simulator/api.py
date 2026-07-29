@@ -3,9 +3,10 @@
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
+from typing import cast
 
 import structlog
-from fastapi import APIRouter, FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -75,18 +76,23 @@ async def health(request: Request) -> HealthResponse:
 async def devices(request: Request) -> FleetResponse:
     settings: Settings = request.app.state.settings
     engine: ReplayEngine | None = request.app.state.engine
-    return FleetResponse(
-        devices=[
+
+    states: list[DeviceState] = []
+    if engine is not None:
+        states = [
             DeviceState(device_id=device_id, faulted=engine.is_faulted(device_id))
-            for device_id in (engine.device_ids if engine else [])
-        ],
+            for device_id in engine.device_ids
+        ]
+
+    return FleetResponse(
+        devices=states,
         interval_seconds=settings.publish_interval_seconds,
         replaying=engine is not None,
     )
 
 
 @router.post("/faults/inject", tags=["faults"], summary="Release a device into its fault ramp")
-@limiter.limit(lambda: get_settings().inject_rate_limit)  # type: ignore[misc]
+@limiter.limit(lambda: get_settings().inject_rate_limit)
 async def inject_fault(request: Request, body: InjectRequest) -> InjectResponse:
     engine = _engine(request)
     try:
@@ -103,12 +109,22 @@ async def inject_fault(request: Request, body: InjectRequest) -> InjectResponse:
 
 
 @router.post("/faults/reset", tags=["faults"], summary="Return every device to healthy")
-@limiter.limit(lambda: get_settings().inject_rate_limit)  # type: ignore[misc]
+@limiter.limit(lambda: get_settings().inject_rate_limit)
 async def reset_faults(request: Request) -> FleetResponse:
     engine = _engine(request)
     engine.reset_all()
     log.info("fault.reset")
     return await devices(request)
+
+
+def _on_rate_limit_exceeded(request: Request, exc: Exception) -> Response:
+    """Adapt slowapi's handler to the signature Starlette expects.
+
+    Starlette types every exception handler as accepting `Exception`, but
+    dispatches to it only for the class it was registered against — so the
+    narrowing here is guaranteed by the registration below.
+    """
+    return _rate_limit_exceeded_handler(request, cast(RateLimitExceeded, exc))
 
 
 def build_engine(settings: Settings) -> ReplayEngine | None:
@@ -171,7 +187,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.engine = None
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _on_rate_limit_exceeded)
 
     if settings.cors_origins:
         app.add_middleware(
