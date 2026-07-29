@@ -6,12 +6,13 @@
 > with the diagnostic code attached — before the customer notices anything is
 > wrong.
 
-**Status: P3 complete — the system does what it says on the tin.** Telemetry
-flows simulator → MQTT → ingest → TimescaleDB → Redis → SSE → dashboard; an
-ONNX model scores compressor degradation in-process; and when a score stays
-elevated, the rules engine opens a support ticket in the CRM panel with a device
-ID, a diagnostic code and a severity. The Inject Fault button and deployment are
-P4. See [docs/architecture.md](docs/architecture.md) for the phase table.
+**Status: P4 complete.** Click **Inject Fault**, and within ten seconds the
+sensor trace bends, the degradation score climbs, the device walks NORMAL →
+WATCH → ALERT, and a support ticket appears in the CRM panel with a device ID,
+diagnostic code `F1-07` and a severity. Measured worst case across the four demo
+devices is **7.6 s**, and a test enforces the budget. README polish and the demo
+video are P5. See [docs/architecture.md](docs/architecture.md) for the phase
+table.
 
 The model is a gradient-boosted health-index regressor trained on NASA C-MAPSS
 FD001. Held-out **R² 0.79**, and at a 0.5 threshold it flagged **all 20 held-out
@@ -62,6 +63,32 @@ cp .env.example .env && make up
 
 The replay fixture is committed, so there is no download step. To regenerate it
 from raw C-MAPSS, see [ml/README.md](ml/README.md).
+
+No Docker? Open the repository in GitHub Codespaces — `.devcontainer/` brings
+the whole stack up on their free quota. Replace `OWNER/REPO` with your fork:
+
+```
+[![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/OWNER/REPO)
+```
+
+## Deploying it
+
+[`deploy/`](deploy/) has a runbook for an Oracle Cloud **Always Free** VM (the
+whole stack behind Caddy for free TLS) and notes for putting the dashboard on
+Vercel instead. None of it has been executed — treat the first deploy as a
+debugging session.
+
+## Swapping the CRM
+
+`TicketSink` is the ports-and-adapters point of this project.
+`InMemoryTicketSink` backs the CRM panel the app serves itself, and the live
+demo uses it **by design**: the one thing a reviewer is asked to watch cannot
+break because someone else's API is having a bad afternoon.
+
+`HubSpotTicketSink` talks to the real HubSpot Tickets API. Selection is one
+environment variable — `TICKET_SINK=hubspot` plus `HUBSPOT_ACCESS_TOKEN` — and
+no calling code changes. It is covered by contract tests against a mocked
+transport and has **never been run against a real HubSpot account**.
 
 `make` is not available on Windows by default. Every target is a thin wrapper,
 so run the underlying command directly:

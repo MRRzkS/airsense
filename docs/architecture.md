@@ -64,6 +64,29 @@ Scores are `float | None`. A device that has not yet reported a full window is
 stored unscored — `0.0` would be indistinguishable from a genuinely healthy
 unit, and P3's rules would act on it.
 
+## Demo timing
+
+The acceptance criterion gives ten seconds between a click and a ticket. Three
+numbers have to fit inside it: the scorer's 20-sample feature window, the rules'
+5 sustained samples, and the model needing most of a degradation ramp before the
+score clears 0.75.
+
+At one frame per second that is well over a minute. The simulator therefore
+publishes at 5 Hz, and fault injection enters the trajectory at life fraction
+0.60 rather than at the healthy boundary — measured across all four demo
+devices, entering at the boundary reaches ALERT in 49–56 samples against 33–38
+from 0.60. Worst case at 5 Hz is **7.6 s**, leaving room for transport and
+rendering.
+
+Idle devices ping-pong through the healthy prefix of their trajectory rather
+than looping back to frame zero: wrapping would step the channels
+discontinuously, and the model's delta features are computed across exactly that
+step. An untouched fleet never self-alerts.
+
+`apps/ingest-api/tests/integration/test_acceptance.py` enforces the budget
+against the real fixture, the real ONNX model and the shipped thresholds, for
+every device.
+
 ## Why scoring is in-process
 
 A separate model-serving service is the correct production answer and the wrong
@@ -80,5 +103,5 @@ the same event loop — is listed in the README's Limitations section.
 | P1 | simulator → MQTT → ingest → Timescale → SSE → chart | done |
 | P2 | offline training, ONNX export, in-process scoring | done |
 | P3 | four domain rules, TicketSink, CRM panel | done |
-| P4 | HubSpot adapter, Inject Fault, deploy | pending |
+| P4 | HubSpot adapter, Inject Fault, deploy | done |
 | P5 | README, diagram, video, Limitations | pending |
