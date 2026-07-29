@@ -1,4 +1,12 @@
 export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+export const SIMULATOR_URL = import.meta.env.VITE_SIMULATOR_URL ?? "http://localhost:8001";
+
+export class RateLimitedError extends Error {
+  constructor() {
+    super("Rate limited — wait a moment before injecting another fault.");
+    this.name = "RateLimitedError";
+  }
+}
 
 export interface Reading {
   device_id: string;
@@ -82,6 +90,29 @@ export function fetchHistory(deviceId: string, limit = 240): Promise<Reading[]> 
 
 export function fetchTickets(limit = 20): Promise<Ticket[]> {
   return getJson<Ticket[]>(`/tickets?limit=${limit}`);
+}
+
+async function postSimulator<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${SIMULATOR_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (response.status === 429) {
+    throw new RateLimitedError();
+  }
+  if (!response.ok) {
+    throw new Error(`simulator responded ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+export function injectFault(deviceId: string): Promise<{ device_id: string; faulted: boolean }> {
+  return postSimulator("/faults/inject", { device_id: deviceId });
+}
+
+export function resetFaults(): Promise<unknown> {
+  return postSimulator("/faults/reset");
 }
 
 export function formatValue(value: number, spec: ChannelSpec): string {

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { TicketPanel } from "@/features/crm/TicketPanel";
 import { DeviceList } from "@/features/devices/DeviceList";
 import { StateBadge } from "@/features/devices/StateBadge";
+import { InjectFaultButton } from "@/features/faults/InjectFaultButton";
 import { ChannelTiles } from "@/features/telemetry/ChannelTiles";
 import { TelemetryChart } from "@/features/telemetry/TelemetryChart";
 import { useDeviceSeries, useTelemetryStream } from "@/features/telemetry/useTelemetry";
@@ -80,7 +81,10 @@ export default function App() {
           <span className="font-mono text-sm font-medium tracking-tight">airsense</span>
           <span className="text-xs text-muted-foreground">fleet console</span>
         </div>
-        <ConnectionBadge connected={connected} />
+        <div className="flex items-center gap-4">
+          <ConnectionBadge connected={connected} />
+          <InjectFaultButton deviceId={active} />
+        </div>
       </header>
 
       <main className="mx-auto grid max-w-[92rem] gap-5 px-6 py-6 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_minmax(0,18rem)]">
