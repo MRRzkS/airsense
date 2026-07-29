@@ -104,4 +104,4 @@ the same event loop — is listed in the README's Limitations section.
 | P2 | offline training, ONNX export, in-process scoring | done |
 | P3 | four domain rules, TicketSink, CRM panel | done |
 | P4 | HubSpot adapter, Inject Fault, deploy | done |
-| P5 | README, diagram, video, Limitations | pending |
+| P5 | README, diagram, video, Limitations | done — except the demo recording, which needs a machine with Docker; see [RECORDING.md](RECORDING.md) |
