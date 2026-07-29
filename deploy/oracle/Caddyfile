@@ -1,0 +1,29 @@
+{$AIRSENSE_DOMAIN} {
+	encode zstd gzip
+
+	# Strips the prefix before proxying, so the service keeps its own route
+	# names (/devices, /tickets, /stream) and nothing upstream knows it is
+	# mounted under a path.
+	handle_path /api/* {
+		reverse_proxy ingest-api:8000 {
+			# Server-sent events. Without this Caddy buffers the response and
+			# the dashboard's live chart receives nothing until the stream
+			# closes, which for an infinite stream means never.
+			flush_interval -1
+		}
+	}
+
+	handle_path /sim/* {
+		reverse_proxy device-simulator:8001
+	}
+
+	handle {
+		reverse_proxy dashboard:80
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

@@ -1,0 +1,77 @@
+# Production overlay. Layered on top of the root compose file:
+#
+#   docker compose -f docker-compose.yml -f deploy/oracle/docker-compose.prod.yml up -d
+#
+# What it changes: no source bind mounts, no reload, restart policies, and no
+# published ports for the datastores — only Caddy is reachable from outside.
+
+services:
+  timescaledb:
+    ports: !override []
+    restart: unless-stopped
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      - ../../infra/timescale/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+
+  redis:
+    ports: !override []
+    restart: unless-stopped
+
+  mosquitto:
+    ports: !override []
+    restart: unless-stopped
+    volumes:
+      - ../../infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+
+  ingest-api:
+    # The bind mount exists so local edits reload without a rebuild. In
+    # production the image's own copy of the source is the one that runs.
+    volumes: !override []
+    ports: !override []
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ALLOW_ORIGINS: ${PUBLIC_ORIGIN}
+
+  device-simulator:
+    volumes: !override []
+    ports: !override []
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      CORS_ALLOW_ORIGINS: ${PUBLIC_ORIGIN}
+      # Tighter than the local default: this endpoint is reachable from the
+      # public internet in this deployment.
+      INJECT_RATE_LIMIT: ${INJECT_RATE_LIMIT:-6/minute}
+
+  dashboard:
+    ports: !override []
+    restart: unless-stopped
+    build:
+      context: ../../apps/dashboard
+      args:
+        VITE_API_URL: ${PUBLIC_ORIGIN}/api
+        VITE_SIMULATOR_URL: ${PUBLIC_ORIGIN}/sim
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AIRSENSE_DOMAIN: ${AIRSENSE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - dashboard
+      - ingest-api
+      - device-simulator
+
+volumes:
+  caddy-data:
+  caddy-config:

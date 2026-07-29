@@ -1,0 +1,20 @@
+{
+  "name": "airsense",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "forwardPorts": [3000, 8000, 8001],
+  "portsAttributes": {
+    "3000": { "label": "dashboard", "onAutoForward": "openPreview" },
+    "8000": { "label": "ingest-api" },
+    "8001": { "label": "device-simulator" }
+  },
+  "postCreateCommand": "cp -n .env.example .env && docker compose up -d --build",
+  "customizations": {
+    "vscode": {
+      "extensions": ["charliermarsh.ruff", "ms-python.mypy-type-checker"]
+    }
+  }
+}
