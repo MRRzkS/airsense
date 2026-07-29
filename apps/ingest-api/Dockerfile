@@ -17,8 +17,8 @@ COPY apps/ingest-api/migrations ./migrations
 COPY ml/artifacts/compressor_degradation.onnx ml/artifacts/feature_spec.json ./models/
 
 # Editable so the compose bind mount over /app/src takes effect and --reload
-# picks up edits without a rebuild. The production image in deploy/ installs
-# normally.
+# picks up edits without a rebuild. The production overlay drops the mount, so
+# the copy baked in above is what runs there.
 RUN pip install -e . && chown -R airsense:airsense /app
 
 USER airsense
