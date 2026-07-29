@@ -6,6 +6,7 @@ having a bad afternoon. Swapping to HubSpot is an environment variable.
 """
 
 import itertools
+from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
@@ -27,7 +28,10 @@ class TicketNotFoundError(KeyError):
 @dataclass(slots=True)
 class InMemoryTicketSink:
     tickets: dict[str, Ticket] = field(default_factory=dict)
-    _sequence: itertools.count[int] = field(default_factory=lambda: itertools.count(1))
+    # Iterator[int] rather than itertools.count[int]: the concrete class only
+    # became subscriptable at runtime in 3.13, and this project targets 3.12.
+    # An iterator of ints is all this needs anyway — it is only ever advanced.
+    _sequence: Iterator[int] = field(default_factory=lambda: itertools.count(1))
 
     async def latest_for(self, device_id: DeviceId, fault_class: FaultClass) -> Ticket | None:
         matching = [
